@@ -12,11 +12,17 @@ import com.hmdp.service.IUserService;
 import com.hmdp.utils.RegexUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import javax.management.Attribute;
 import javax.servlet.http.HttpSession;
 
+import java.util.concurrent.TimeUnit;
+
+import static com.hmdp.utils.RedisConstants.LOGIN_CODE_KEY;
+import static com.hmdp.utils.RedisConstants.LOGIN_CODE_TTL;
 import static com.hmdp.utils.SystemConstants.USER_NICK_NAME_PREFIX;
 
 /**
@@ -30,7 +36,8 @@ import static com.hmdp.utils.SystemConstants.USER_NICK_NAME_PREFIX;
 @Slf4j
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
-
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
     @Override
     public Result sendcode(String phone, HttpSession session) {
         //1.校验手机号
@@ -40,8 +47,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         }
         //3.校验通过 生成验证码
         String code=RandomUtil.randomNumbers(6);
-        //4.保存验证码到session
-        session.setAttribute("code",code);
+        //4.保存验证码到Redis
+        stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY+phone,code,LOGIN_CODE_TTL, TimeUnit.MINUTES);
         //5.发送验证码
         log.debug("短信验证码发送成功{}：",code);
 
@@ -57,12 +64,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             return Result.fail("验证码错误！");
         }
 
-        //3.校验验证码
-        //用户发来的验证码
-        Object cacheCode=session.getAttribute("code");
-        //session中的验证码
+        //3.从redis获取验证码并校验
+        String cacheCode=stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY+phone);
         String code=loginForm.getCode();
-        if(cacheCode==null||!cacheCode.toString().equals(code)){
+        if(cacheCode==null||!cacheCode.equals(code)){
             //4.不一致，报错
             return Result.fail("验证码错误！");
         }
