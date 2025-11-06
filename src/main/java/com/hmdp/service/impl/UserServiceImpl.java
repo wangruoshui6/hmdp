@@ -1,6 +1,8 @@
 package com.hmdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.LoginFormDTO;
@@ -9,6 +11,7 @@ import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
+import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.RegexUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -19,6 +22,8 @@ import javax.annotation.Resource;
 import javax.management.Attribute;
 import javax.servlet.http.HttpSession;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.hmdp.utils.RedisConstants.LOGIN_CODE_KEY;
@@ -78,9 +83,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if(user==null){
             user=createUserWithPhone(phone);
         }
-        //8.保存用户信息到session中
-        session.setAttribute("user", BeanUtil.copyProperties(user, UserDTO.class));
-        return Result.ok();
+        //7.生成token
+        //7.1 随机生成token
+        String token=UUID.randomUUID().toString(true);
+         // 7.2 将User对象转为HashMap存储
+         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+         Map<String, Object> userMap = BeanUtil.beanToMap(userDTO,new HashMap<>(),
+                 CopyOptions.create().setFieldValueEditor((fieldName,fieldValue)->fieldValue.toString()));
+         //7.3 存储
+         String tokenKey= RedisConstants.LOGIN_USER_KEY+token;
+         stringRedisTemplate.opsForHash().putAll(tokenKey,userMap);
+         //7.4 设置token有效期
+         stringRedisTemplate.expire(tokenKey,RedisConstants.LOGIN_USER_TTL,TimeUnit.MINUTES);
+        //8.返回token
+        return Result.ok(token);
         }
 
 

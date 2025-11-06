@@ -4,6 +4,8 @@ import cn.hutool.core.util.StrUtil;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import org.springframework.beans.BeanUtils;
+import cn.hutool.core.bean.BeanUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -11,28 +13,19 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class LoginInterceptor implements HandlerInterceptor {
-    private StringRedisTemplate stringRedisTemplate;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        //1.获取请求头中的token
-        String token=request.getHeader("authorization");
-        if(StrUtil.isBlank(token)){
-            //.不存在，拦截，返回401状态码
+        //判断用户是否存在
+        if(UserHolder.getUser()==null){
+            //没有，则拦截
             response.setStatus(401);
+            //拦截
             return false;
         }
-        //2.基于token 获取redis中的用户
-        Map<Object,Object>userMap= stringRedisTemplate.opsForHash().entries(RedisConstants.LOGIN_USER_KEY+token);
-        //3.判断用户是否存在
-        if(userMap.isEmpty()){
-            response.setStatus(401);
-            return false;
-        }
-        //5.将查询到的Hash数据转为UserDTO对象
-
-        //6.放行
+        //8.有用户，放行
         return true;
     }
 
