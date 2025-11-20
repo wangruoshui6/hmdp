@@ -82,6 +82,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 }  
     //4.生成token
     String token=UUID.randomUUID().toString(true);
+    log.info("token:"+token);
     //将User对象转为HashMap存储
     UserDTO userDTO=BeanUtil.copyProperties(user,UserDTO.class);
     Map<String,Object> userMap=BeanUtil.beanToMap(userDTO,new HashMap<>(),
