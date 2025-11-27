@@ -57,7 +57,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY+phone, code, LOGIN_CODE_TTL, TimeUnit.MINUTES);
         //4.发送验证码
         log.debug("短信验证码发送成功 {}",code);
-
         return Result.ok();
 
     }
@@ -95,9 +94,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     //返回token
     return Result.ok(token);
 }
-
-
-
     private User createUserWithPhone(String phone) {
         User user=new User();
         user.setPhone(phone);
