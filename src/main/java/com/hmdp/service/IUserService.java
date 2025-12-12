@@ -21,4 +21,8 @@ public interface IUserService extends IService<User> {
     Result sendcode(String phone);
 
     Result login(LoginFormDTO loginForm);
+
+    Result sign();
+
+    Result signCount();
 }
